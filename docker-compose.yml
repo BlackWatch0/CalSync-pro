@@ -4,10 +4,10 @@ services:
     image: calsync-pro:latest
     container_name: calsync-pro
     restart: unless-stopped
-    env_file:
-      - .env
     volumes:
+      - ./config:/app/config:ro
       - ./state:/app/state
     environment:
+      - DEBUG_LEVEL=INFO
       - SYNC_STATE_FILE=/app/state/.mirror_sync_state.json
-    command: ["python", "sync.py", "--daemon", "--interval-seconds", "600"]
+    command: ["python", "sync.py", "--json-config", "/app/config/sync-config.json"]

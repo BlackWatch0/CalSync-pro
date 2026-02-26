@@ -21,9 +21,18 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False)
 
 
-def setup_logging(level: int = logging.INFO) -> None:
+def resolve_log_level(level: str | int) -> int:
+    if isinstance(level, int):
+        return level
+    normalized = str(level).strip().upper()
+    if normalized in logging._nameToLevel:
+        return logging._nameToLevel[normalized]
+    return logging.INFO
+
+
+def setup_logging(level: str | int = logging.INFO) -> None:
     root = logging.getLogger()
-    root.setLevel(level)
+    root.setLevel(resolve_log_level(level))
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
     root.handlers.clear()

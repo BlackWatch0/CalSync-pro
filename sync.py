@@ -21,14 +21,37 @@ def _stop(_signum, _frame):
 
 
 def main() -> int:
-    setup_logging()
     signal.signal(signal.SIGINT, _stop)
     signal.signal(signal.SIGTERM, _stop)
 
     try:
         app_config = build_config()
+        setup_logging(app_config.debug_level)
+        logger.info(
+            "Runtime settings loaded",
+            extra={
+                "extra": {
+                    "debug_level": app_config.debug_level,
+                    "daemon_mode": app_config.daemon_mode,
+                    "interval_seconds": app_config.interval_seconds,
+                    "sync_count": len(app_config.syncs),
+                }
+            },
+        )
         engines = []
         for sync_config in app_config.syncs:
+            logger.info(
+                "Sync mapping loaded",
+                extra={
+                    "extra": {
+                        "sync": sync_config.sync_name,
+                        "source_count": len(sync_config.ics_urls),
+                        "calendar_name": sync_config.calendar_name,
+                        "calendar_url": sync_config.calendar_url,
+                        "state_file": str(sync_config.state_file),
+                    }
+                },
+            )
             state = SyncState(sync_config.state_file)
             fetcher = ICSFetcher(sync_config, state)
             mirror = CalDAVMirror(sync_config)
@@ -58,6 +81,7 @@ def main() -> int:
                     break
                 time.sleep(1)
     except Exception as exc:  # noqa: BLE001
+        setup_logging()
         logger.error("Fatal error", extra={"extra": {"error": str(exc)}})
         return 1
 

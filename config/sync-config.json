@@ -1,0 +1,25 @@
+﻿{
+  "sources_file": "sources.json",
+  "clients_file": "clients.json",
+  "daemon_mode": true,
+  "interval_seconds": 600,
+  "debug_level": "INFO",
+  "defaults": {
+    "timezone": "Europe/London",
+    "range_past_days": 30,
+    "range_future_days": 365,
+    "request_timeout": 30,
+    "max_retries": 5,
+    "retry_base_seconds": 1.5
+  },
+  "mappings": [
+    {
+      "name": "main-sync",
+      "source": "main_source",
+      "client": "main_client",
+      "overrides": {
+        "state_file": "/app/state/.mirror_sync_state_main.json"
+      }
+    }
+  ]
+}

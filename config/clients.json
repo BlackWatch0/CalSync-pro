@@ -1,0 +1,10 @@
+﻿{
+  "clients": {
+    "main_client": {
+      "caldav_url": "https://caldav.example.com",
+      "caldav_username": "replace_me",
+      "caldav_password": "replace_me",
+      "calendar_name": "Mirror-Calendar"
+    }
+  }
+}

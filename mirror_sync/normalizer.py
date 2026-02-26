@@ -64,9 +64,7 @@ def build_bundle(uid: str, events: List[Component], vtimezones: List[Component])
     for tz_comp in vtimezones:
         cal.add_component(tz_comp)
     for event in events:
-        event_copy = event.copy()
-        event_copy["X-CALSYNC-MIRROR"] = "TRUE"
-        cal.add_component(event_copy)
+        cal.add_component(event.copy())
     raw_ical = cal.to_ical().decode("utf-8")
     return SourceEventBundle(uid=uid, raw_ical=raw_ical, fingerprint="")
 

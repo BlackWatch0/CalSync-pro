@@ -1,0 +1,12 @@
+﻿{
+  "sources": {
+    "main_source": {
+      "ics_urls": [
+        "https://example.com/calendar.ics"
+      ],
+      "ics_headers": {
+        "User-Agent": "CalSync-pro/1.0"
+      }
+    }
+  }
+}

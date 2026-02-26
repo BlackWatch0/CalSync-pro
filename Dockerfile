@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["python", "sync.py"]
+CMD ["python", "sync.py", "--json-config", "/app/config/sync-config.json"]

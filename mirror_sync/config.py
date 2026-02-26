@@ -38,6 +38,7 @@ class AppConfig:
     syncs: List[SyncConfig]
     daemon_mode: bool
     interval_seconds: int
+    debug_level: str
 
 
 def parse_headers(raw: str) -> Dict[str, str]:
@@ -108,7 +109,7 @@ def _build_sync_config_from_json(item: Dict[str, object], defaults: Dict[str, ob
     )
 
 
-def _load_json_syncs(config_path: Path) -> AppConfig:
+def _load_json_syncs(config_path: Path, debug_level: Optional[str] = None) -> AppConfig:
     payload = json.loads(config_path.read_text(encoding="utf-8"))
 
     sources_path = config_path.parent / str(payload.get("sources_file", "sources.json"))
@@ -149,7 +150,13 @@ def _load_json_syncs(config_path: Path) -> AppConfig:
 
     daemon_mode = bool(payload.get("daemon_mode", False))
     interval_seconds = int(payload.get("interval_seconds", 600))
-    return AppConfig(syncs=syncs, daemon_mode=daemon_mode, interval_seconds=interval_seconds)
+    configured_level = str(payload.get("debug_level", "INFO"))
+    return AppConfig(
+        syncs=syncs,
+        daemon_mode=daemon_mode,
+        interval_seconds=interval_seconds,
+        debug_level=(debug_level or configured_level).upper(),
+    )
 
 
 def build_config() -> AppConfig:
@@ -175,11 +182,14 @@ def build_config() -> AppConfig:
     parser.add_argument("--request-timeout", type=int, default=int(env_default("REQUEST_TIMEOUT", "30")))
     parser.add_argument("--max-retries", type=int, default=int(env_default("MAX_RETRIES", "5")))
     parser.add_argument("--retry-base-seconds", type=float, default=float(env_default("RETRY_BASE_SECONDS", "1.5")))
+    parser.add_argument("--debug-level", default=env_default("DEBUG_LEVEL"))
 
     args = parser.parse_args()
 
+    debug_level = str(args.debug_level or "INFO").upper()
+
     if args.json_config:
-        return _load_json_syncs(Path(args.json_config))
+        return _load_json_syncs(Path(args.json_config), debug_level)
 
     if not args.ics_urls:
         raise ValueError("--ics-urls or SYNC_JSON_CONFIG must be set")
@@ -216,4 +226,9 @@ def build_config() -> AppConfig:
         max_retries=args.max_retries,
         retry_base_seconds=args.retry_base_seconds,
     )
-    return AppConfig(syncs=[sync], daemon_mode=args.daemon, interval_seconds=args.interval_seconds)
+    return AppConfig(
+        syncs=[sync],
+        daemon_mode=args.daemon,
+        interval_seconds=args.interval_seconds,
+        debug_level=debug_level,
+    )

@@ -26,23 +26,34 @@ def main() -> int:
     signal.signal(signal.SIGTERM, _stop)
 
     try:
-        config = build_config()
-        state = SyncState(config.state_file)
-        fetcher = ICSFetcher(config, state)
-        mirror = CalDAVMirror(config)
-        engine = MirrorSyncEngine(fetcher, mirror, state, config.timezone)
+        app_config = build_config()
+        engines = []
+        for sync_config in app_config.syncs:
+            state = SyncState(sync_config.state_file)
+            fetcher = ICSFetcher(sync_config, state)
+            mirror = CalDAVMirror(sync_config)
+            engines.append((sync_config, MirrorSyncEngine(fetcher, mirror, state, sync_config.timezone)))
 
-        if not config.daemon_mode:
-            engine.run_once()
+        if not app_config.daemon_mode:
+            for sync_config, engine in engines:
+                logger.info("Running one-shot sync", extra={"extra": {"sync": sync_config.sync_name}})
+                engine.run_once()
             return 0
 
-        logger.info("Starting daemon loop", extra={"extra": {"interval_seconds": config.interval_seconds}})
+        logger.info(
+            "Starting daemon loop",
+            extra={"extra": {"interval_seconds": app_config.interval_seconds, "sync_count": len(engines)}},
+        )
         while RUNNING:
-            try:
-                engine.run_once()
-            except Exception as exc:  # noqa: BLE001
-                logger.error("Sync round crashed", extra={"extra": {"operation": "sync_round", "error": str(exc)}})
-            for _ in range(config.interval_seconds):
+            for sync_config, engine in engines:
+                try:
+                    engine.run_once()
+                except Exception as exc:  # noqa: BLE001
+                    logger.error(
+                        "Sync round crashed",
+                        extra={"extra": {"operation": "sync_round", "sync": sync_config.sync_name, "error": str(exc)}},
+                    )
+            for _ in range(app_config.interval_seconds):
                 if not RUNNING:
                     break
                 time.sleep(1)

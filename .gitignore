@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Environment and local config
+.env
+.env.*
+local.*
+
+# Runtime
+*.log
+*.pid
+.mirror_sync_state.json
+
+# Editors/OS
+.DS_Store
+.idea/
+.vscode/

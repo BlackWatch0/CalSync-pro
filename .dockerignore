@@ -1,0 +1,14 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+.venv/
+venv/
+.env
+.mypy_cache/
+.pytest_cache/
+.mirror_sync_state.json

@@ -1,0 +1,14 @@
+services:
+  calsync:
+    build: .
+    image: calsync-pro:latest
+    container_name: calsync-pro
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      SYNC_STATE_FILE: /app/state/.mirror_sync_state.json
+    volumes:
+      - ./state:/app/state
+    command: ["--daemon", "--interval-seconds", "600"]

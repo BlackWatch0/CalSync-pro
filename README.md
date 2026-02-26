@@ -46,6 +46,66 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## 5.1 Docker 打包与运行
+
+### 准备环境变量
+
+```bash
+cp .env.example .env
+mkdir -p state
+```
+
+按需编辑 `.env` 中的 ICS/CalDAV 参数。
+
+### 构建镜像
+
+```bash
+docker build -t calsync-pro:latest .
+```
+
+### one-shot 模式（一次性同步）
+
+```bash
+docker run --rm \
+  --env-file .env \
+  -v $(pwd)/state:/app/state \
+  calsync-pro:latest
+```
+
+> 建议在 `.env` 中配置 `ICS_URLS`、`CALDAV_URL`、`CALDAV_USERNAME`、`CALDAV_PASSWORD`、`CALENDAR_NAME`（或 `CALENDAR_URL`）等环境变量，并设置 `SYNC_STATE_FILE=/app/state/.mirror_sync_state.json` 以持久化同步状态。
+
+### daemon 模式（持续同步）
+
+```bash
+docker run -d \
+  --name calsync-pro \
+  --restart unless-stopped \
+  --env-file .env \
+  -v $(pwd)/state:/app/state \
+  calsync-pro:latest \
+  --daemon --interval-seconds 600
+```
+
+### 使用 Docker Compose
+
+仓库已提供 `docker-compose.yml`，默认以 daemon 模式运行：
+
+```bash
+docker compose up -d --build
+```
+
+查看日志：
+
+```bash
+docker compose logs -f
+```
+
+停止：
+
+```bash
+docker compose down
+```
+
 ## 6. 运行
 
 ### 6.1 one-shot

@@ -1,0 +1,16 @@
+{
+  "clients": [
+    {
+      "id": "office365_main",
+      "caldav_url": "https://caldav-a.example.com",
+      "username": "alice",
+      "password": "secret"
+    },
+    {
+      "id": "nextcloud_ops",
+      "caldav_url": "https://caldav-b.example.com",
+      "username": "bob",
+      "password": "secret2"
+    }
+  ]
+}

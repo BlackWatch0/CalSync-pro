@@ -1,0 +1,22 @@
+{
+  "jobs": [
+    {
+      "id": "sync_team_a",
+      "source_id": "team_a_feed",
+      "client_id": "office365_main",
+      "calendar_name": "Team-A-Mirror",
+      "timezone": "Europe/London",
+      "range_past_days": 30,
+      "range_future_days": 365
+    },
+    {
+      "id": "sync_team_b",
+      "source_id": "team_b_feed",
+      "client_id": "nextcloud_ops",
+      "calendar_url": "https://caldav-b.example.com/calendars/bob/team-b/",
+      "timezone": "Europe/London",
+      "range_past_days": 7,
+      "range_future_days": 180
+    }
+  ]
+}

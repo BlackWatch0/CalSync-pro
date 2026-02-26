@@ -1,0 +1,24 @@
+{
+  "sources": [
+    {
+      "id": "team_a_feed",
+      "url": "https://example.com/team-a.ics",
+      "headers": {
+        "User-Agent": "CalSync-Mirror/1.0"
+      },
+      "auth": {
+        "type": "bearer",
+        "token": "YOUR_ICS_TOKEN"
+      }
+    },
+    {
+      "id": "team_b_feed",
+      "url": "https://example.com/team-b.ics",
+      "auth": {
+        "type": "basic",
+        "username": "ics_user",
+        "password": "ics_pass"
+      }
+    }
+  ]
+}

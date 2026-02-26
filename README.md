@@ -74,6 +74,92 @@ python sync.py \
   --calendar-url "https://caldav.example.com/calendars/alice/mirror/"
 ```
 
+### 6.3 JSON 配置（多 ICS → 多客户端映射，源与凭据分离）
+
+你可以把 **ICS 源定义** 与 **远程日历客户端凭据** 分别放到两个 JSON 文件，再通过一个主配置文件做映射。
+
+`sync-config.json`：
+
+```json
+{
+  "sources_file": "sources.json",
+  "clients_file": "clients.json",
+  "daemon_mode": true,
+  "interval_seconds": 600,
+  "defaults": {
+    "timezone": "Europe/London",
+    "range_past_days": 30,
+    "range_future_days": 365
+  },
+  "mappings": [
+    {
+      "name": "team-a",
+      "source": "ics_team_a",
+      "client": "caldav_a"
+    },
+    {
+      "name": "team-b",
+      "source": "ics_team_b",
+      "client": "caldav_b",
+      "overrides": {
+        "calendar_name": "Mirror-Calendar-B"
+      }
+    }
+  ]
+}
+```
+
+`sources.json`（只放 ICS 相关）：
+
+```json
+{
+  "sources": {
+    "ics_team_a": {
+      "ics_urls": ["https://example.com/a.ics"],
+      "ics_headers": {"User-Agent": "CalSync-Mirror/1.0"}
+    },
+    "ics_team_b": {
+      "ics_urls": ["https://example.com/b.ics"],
+      "ics_bearer_token": "token-b"
+    }
+  }
+}
+```
+
+`clients.json`（只放 CalDAV 客户端凭据）：
+
+```json
+{
+  "clients": {
+    "caldav_a": {
+      "caldav_url": "https://caldav-a.example.com",
+      "caldav_username": "alice",
+      "caldav_password": "secret-a",
+      "calendar_name": "Mirror-Calendar-A"
+    },
+    "caldav_b": {
+      "caldav_url": "https://caldav-b.example.com",
+      "caldav_username": "bob",
+      "caldav_password": "secret-b",
+      "calendar_url": "https://caldav-b.example.com/calendars/bob/mirror/"
+    }
+  }
+}
+```
+
+运行：
+
+```bash
+python sync.py --json-config ./sync-config.json
+```
+
+也支持环境变量：
+
+```bash
+export SYNC_JSON_CONFIG=./sync-config.json
+python sync.py
+```
+
 ## 7. 环境变量示例
 
 ```bash
@@ -99,6 +185,9 @@ export SYNC_RANGE_FUTURE_DAYS="365"
 export MAX_RETRIES="5"
 export RETRY_BASE_SECONDS="1.5"
 export REQUEST_TIMEOUT="30"
+
+# JSON 主配置入口（可选）
+export SYNC_JSON_CONFIG="./sync-config.json"
 ```
 
 ## 8. 常见问题（FAQ）

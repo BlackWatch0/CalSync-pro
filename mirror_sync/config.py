@@ -61,6 +61,11 @@ def env_default(name: str, fallback: Optional[str] = None) -> Optional[str]:
     return value if value not in (None, "") else fallback
 
 
+def _read_json(path: Path) -> Dict[str, object]:
+    # Accept both utf-8 and utf-8 BOM encoded files.
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
 def _build_sync_config_from_json(item: Dict[str, object], defaults: Dict[str, object], name: str) -> SyncConfig:
     merged = dict(defaults)
     merged.update(item)
@@ -110,7 +115,7 @@ def _build_sync_config_from_json(item: Dict[str, object], defaults: Dict[str, ob
 
 
 def _load_json_syncs(config_path: Path, debug_level: Optional[str] = None) -> AppConfig:
-    payload = json.loads(config_path.read_text(encoding="utf-8"))
+    payload = _read_json(config_path)
 
     sources_path = config_path.parent / str(payload.get("sources_file", "sources.json"))
     clients_path = config_path.parent / str(payload.get("clients_file", "clients.json"))
@@ -118,14 +123,16 @@ def _load_json_syncs(config_path: Path, debug_level: Optional[str] = None) -> Ap
     if not isinstance(mappings, list) or not mappings:
         raise ValueError("json config: mappings must be a non-empty array")
 
-    sources_payload = json.loads(sources_path.read_text(encoding="utf-8"))
-    clients_payload = json.loads(clients_path.read_text(encoding="utf-8"))
+    sources_payload = _read_json(sources_path)
+    clients_payload = _read_json(clients_path)
     sources = sources_payload.get("sources", {})
     clients = clients_payload.get("clients", {})
 
     global_defaults = payload.get("defaults", {})
     if not isinstance(global_defaults, dict):
         raise ValueError("json config: defaults must be an object")
+
+    interval_seconds = int(payload.get("interval_seconds", 600))
 
     syncs: List[SyncConfig] = []
     for idx, mapping in enumerate(mappings):
@@ -144,12 +151,12 @@ def _load_json_syncs(config_path: Path, debug_level: Optional[str] = None) -> Ap
         merged.update(sources[source_name])
         merged.update(clients[client_name])
         merged.update(mapping.get("overrides", {}))
+        merged.setdefault("interval_seconds", interval_seconds)
         merged.setdefault("state_file", f".mirror_sync_state_{sync_name}.json")
 
         syncs.append(_build_sync_config_from_json(merged, {}, sync_name))
 
     daemon_mode = bool(payload.get("daemon_mode", False))
-    interval_seconds = int(payload.get("interval_seconds", 600))
     configured_level = str(payload.get("debug_level", "INFO"))
     return AppConfig(
         syncs=syncs,

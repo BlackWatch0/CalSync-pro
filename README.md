@@ -65,7 +65,13 @@ docker compose down
   - `clients_file`：CalDAV 客户端定义文件名
   - `daemon_mode`、`interval_seconds`
   - `debug_level`
-  - `mappings`：source 与 client 的映射关系
+  - `mappings`：source 与 client 的映射关系（可在 `overrides.interval_seconds` 为单个任务设置独立周期）
+
+- 周期规则：
+  - 全局 `interval_seconds` 是默认值
+  - 单个 mapping 未配置 `overrides.interval_seconds` 时使用全局默认
+  - 单个 mapping 配置了 `overrides.interval_seconds` 时按该值独立调度
+  - `daemon_mode=true` 时会监听 `sync-config.json`、`sources.json`、`clients.json`，文件变更后自动热重载
 
 默认示例：`config/sync-config.json`
 
@@ -111,8 +117,9 @@ environment:
 - 当前 `debug_level`
 - `daemon_mode`
 - `interval_seconds`
+- `hot_reload_enabled`
 - `sync_count`
-- 每条 mapping 的 `sync`、`source_count`、`calendar_name/calendar_url`、`state_file`
+- 每条 mapping 的 `sync`、`source_count`、`calendar_name/calendar_url`、`state_file`、`interval_seconds`
 
 ## 配置优先级
 

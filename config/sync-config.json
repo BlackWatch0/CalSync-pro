@@ -18,6 +18,7 @@
       "source": "main_source",
       "client": "main_client",
       "overrides": {
+        "interval_seconds": 300,
         "state_file": "/app/state/.mirror_sync_state_main.json"
       }
     }

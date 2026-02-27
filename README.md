@@ -1,14 +1,60 @@
 ﻿# CalSync-pro (ICS -> CalDAV Mirror Sync)
 
-> 高风险提示：本工具是“镜像同步”模型，ICS 为唯一真源。目标日历中不在 ICS 内的事件会被删除。请使用专用目标日历，不要混用人工维护日历。
+[中文](README.md) | [English](README.en.md)
 
-## 默认部署方式（Docker Compose）
+CalSync-pro 是一个面向生产场景的日历镜像同步工具：把一个或多个 ICS 源作为唯一真源，持续同步到 CalDAV 日历。
 
-本项目默认使用 **Docker + 配置文件映射** 运行。
+它适合以下场景：
+- 团队统一维护 ICS 日程，需要自动分发到个人或共享 CalDAV 日历。
+- 外部系统只提供 ICS 订阅，但你希望在 CalDAV 客户端（如 Apple Calendar、Thunderbird、DAVx5）中原生管理查看。
+- 需要长期运行、可观测、可配置热更新的同步服务。
 
-### 1. 目录放置（宿主机）
+## 核心功能
 
-在项目根目录准备以下结构：
+- ICS -> CalDAV 镜像同步：自动创建、更新、删除目标日历事件。
+- 多源聚合：单个同步任务可配置多个 `ics_urls`。
+- 多任务映射：通过 `mappings` 绑定不同 source/client。
+- 每任务独立同步周期：
+  - 全局 `interval_seconds` 作为默认值。
+  - 每个 mapping 可在 `overrides.interval_seconds` 覆盖。
+- 配置热更新：`daemon_mode=true` 时，修改以下文件会自动重载：
+  - `sync-config.json`
+  - `sources.json`
+  - `clients.json`
+- 稳定性机制：请求超时、重试、指数退避。
+- 运行日志分级：支持 `DEBUG/INFO/WARNING/ERROR/CRITICAL`。
+
+## 同步模型说明
+
+这是“镜像同步”模型：目标 CalDAV 日历会对齐到当前 ICS 实际内容。
+
+高风险提示：目标日历中不在 ICS 里的事件会被删除。
+建议使用专用目标日历，不要与人工维护日历混用。
+
+## 目录结构
+
+```text
+.
+├── mirror_sync/
+│   ├── caldav_client.py
+│   ├── config.py
+│   ├── ics_source.py
+│   ├── logging_utils.py
+│   └── sync_engine.py
+├── config/
+│   ├── sync-config.json
+│   ├── sources.json
+│   └── clients.json
+├── state/
+├── docker-compose.yml
+├── Dockerfile
+├── requirements.txt
+└── sync.py
+```
+
+## 快速开始（Docker Compose）
+
+### 1. 准备目录
 
 ```text
 .
@@ -21,26 +67,20 @@
 └── Dockerfile
 ```
 
-- `config/`：只放同步配置与凭据映射。
-- `state/`：持久化运行状态（ETag、Last-Modified 等）。
-
-### 2. 路径映射（容器内）
-
-`docker-compose.yml` 默认映射：
+### 2. 默认挂载关系
 
 - `./config -> /app/config`（只读）
 - `./state -> /app/state`
 
-容器默认命令：
+容器默认启动命令：
 
 ```bash
 python sync.py --json-config /app/config/sync-config.json
 ```
 
-### 3. 一键启动
+### 3. 启动
 
 ```bash
-mkdir -p state
 docker compose up -d --build
 ```
 
@@ -56,111 +96,46 @@ docker compose logs -f
 docker compose down
 ```
 
-## 配置文件说明（重点）
+## 配置说明
 
-### sync-config.json（总入口）
+### 1) sync-config.json（总入口）
 
-- 负责声明：
-  - `sources_file`：ICS 源定义文件名
-  - `clients_file`：CalDAV 客户端定义文件名
-  - `daemon_mode`、`interval_seconds`
-  - `debug_level`
-  - `mappings`：source 与 client 的映射关系（可在 `overrides.interval_seconds` 为单个任务设置独立周期）
-
-- 周期规则：
-  - 全局 `interval_seconds` 是默认值
-  - 单个 mapping 未配置 `overrides.interval_seconds` 时使用全局默认
-  - 单个 mapping 配置了 `overrides.interval_seconds` 时按该值独立调度
-  - `daemon_mode=true` 时会监听 `sync-config.json`、`sources.json`、`clients.json`，文件变更后自动热重载
-
-默认示例：`config/sync-config.json`
-
-### sources.json（只放 ICS 源）
-
-- 每个 source 可以配置：
-  - `ics_urls`（支持多个）
-  - `ics_headers`
-  - `ics_basic_user` / `ics_basic_password`
-  - `ics_bearer_token`
-
-默认示例：`config/sources.json`
-
-### clients.json（只放 CalDAV 连接）
-
-- 每个 client 配置：
-  - `caldav_url`
-  - `caldav_username`
-  - `caldav_password`
-  - `calendar_name` 或 `calendar_url`（二选一）
-
-默认示例：`config/clients.json`
-
-## DebugLevel 运行信息
-
-支持 `DEBUG_LEVEL`（或 json 内 `debug_level`）控制日志等级：
-
-- `DEBUG`
-- `INFO`（默认）
-- `WARNING`
-- `ERROR`
-- `CRITICAL`
-
-Docker Compose 默认：
-
-```yaml
-environment:
-  - DEBUG_LEVEL=INFO
-```
-
-程序启动时会输出运行参数摘要：
-
-- 当前 `debug_level`
+关键字段：
+- `sources_file`
+- `clients_file`
 - `daemon_mode`
-- `interval_seconds`
-- `hot_reload_enabled`
-- `sync_count`
-- 每条 mapping 的 `sync`、`source_count`、`calendar_name/calendar_url`、`state_file`、`interval_seconds`
+- `interval_seconds`（全局默认周期）
+- `debug_level`
+- `defaults`
+- `mappings`
 
-## 配置优先级
+周期规则：
+- 若 mapping 未设置 `overrides.interval_seconds`，使用全局 `interval_seconds`。
+- 若 mapping 设置了 `overrides.interval_seconds`，该任务按独立周期调度。
 
-1. 命令行参数 `--debug-level`
-2. 环境变量 `DEBUG_LEVEL`
-3. `sync-config.json` 内 `debug_level`
-4. 默认 `INFO`
+### 2) sources.json（仅 ICS 源）
 
-## 本地 Python 运行（可选）
+每个 source 可配置：
+- `ics_urls`
+- `ics_headers`
+- `ics_basic_user` / `ics_basic_password`
+- `ics_bearer_token`
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python sync.py --json-config ./config/sync-config.json
-```
+### 3) clients.json（仅 CalDAV 客户端）
 
-## 重要变更说明
+每个 client 可配置：
+- `caldav_url`
+- `caldav_username`
+- `caldav_password`
+- `calendar_name` 或 `calendar_url`（二选一）
 
-- 默认部署方式已改为 Docker Compose + `config/` 映射。
-- 不再写入或依赖 `X-CALSYNC-MIRROR:TRUE` 字段。
-- 新增 `DebugLevel` 控制和启动阶段运行摘要日志。
+## 配置热更新行为
 
-## 项目结构
+在 `daemon_mode=true` 下：
+- 程序会监听 `sync-config.json`、`sources.json`、`clients.json` 变更并自动重载。
+- 重载成功后，新任务配置和新周期立即生效。
+- 重载失败会记录错误日志，进程继续运行。
 
-```text
-.
-├── mirror_sync/
-│   ├── caldav_client.py
-│   ├── config.py
-│   ├── ics_source.py
-│   ├── logging_utils.py
-│   ├── normalizer.py
-│   └── sync_engine.py
-├── config/
-│   ├── sync-config.json
-│   ├── sources.json
-│   └── clients.json
-├── state/
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-└── sync.py
-```
+## License
+
+本项目遵循仓库中的 `LICENSE`。

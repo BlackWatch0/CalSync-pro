@@ -58,7 +58,7 @@ class CalDAVMirror:
 
     def list_server_objects(self) -> Dict[str, ServerObject]:
         start, end = compute_timerange(self.config.timezone, self.config.range_past_days, self.config.range_future_days)
-        events = self._retry(lambda: self.calendar.date_search(start=start, end=end, expand=False), "date_search")
+        events = self._retry(lambda: self.calendar.search(start=start, end=end, event=True, expand=False), "search")
         result: Dict[str, ServerObject] = {}
         for item in events:
             raw = item.data
